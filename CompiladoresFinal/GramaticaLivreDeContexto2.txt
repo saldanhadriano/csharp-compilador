@@ -1,0 +1,82 @@
+﻿Symbol {
+	String Local;
+	String Tipo;
+	String Indice;
+}
+PROG -> 'var' B_ID SEQ_L 
+	| SEQ_L
+
+B_ID -> TIPO {VAR_S.Tipo = TIPO.Tipo} VAR_S ';'
+	  
+VAR_S -> ID_S {ID_S.symbol = New Symbol(); Add.Symbol(ID_S.symbol)} ',' VAR_S1
+	| ID_S {Add.Symbol(ID_S.local, VAR_S.Tipo)}
+
+ID_S -> id(a-Z){ID_S.Local = lexema.val} {ID_S.Tipo = TIPO.Tipo} ID {ID_S.local = ID.local}
+
+IDvetor -> '[' VAL_N ']' {ID.local = num;} 
+	| $
+	
+VAL_N -> [0-9] {VAL_N.local = lexema.val} 
+      ->| $ {IDvetor.local = VAL_N.local.h}
+	 
+TIPO -> 'int' {TIPO.tipo = int;}
+     ->| 'real' {TIPO.tipo = real;}
+
+SEQ_L -> SEQ SEQ_L 
+	| SEQ
+
+SEQ -> S_WHILE 
+	| S_IF 
+	| S_ATR
+
+S_WHILE -> {inicio = criaLabel(); EXP_I.true = criaLabel();
+				S_WHILE.next = criaLabel();
+				EXP_I.FALSE = S_WHILE.next;
+				gera(inicio + :);} 'while(' EXP_I {gera EXP_I.true + :)}'){' SEQ_L '};'
+
+S_IF -> {EXP_I.TRUE = criaLabel();
+			S_IF.NEXT = criaLabel();
+			S_ELSE.next = criaLabel();
+			EXP_I.FALSE = S_IF.NEXT;}'if(' EXP_C {gera(EXP_I.TRUE + :);} '){'SEQ_L'}' {if(lex == else)
+			{//se o proximo é else
+				{gera(goto + S_ELSE.next); gera(EXP_I.false + :);}
+				else{
+				gera(EXP_I.false + :);}
+				}S_ELSE
+
+S_ELSE -> 'else{' SEQ_L '};' {gera(S_ELSE.next + :)}
+	| $
+
+S_ATR -> VAR_D {S_ATR.id = VAR_D.local.id} '=' EXP {S_ATR.exp = EXP.local(gera(S_ATR.id = S_ATR.exp);} ';'
+
+VAR_D -> id VAR_L {VAR_D.local = lexema.val}
+
+VAR_L -> [num] {VAR_L = num}
+      ->| $
+
+EXP_I -> EXP {EXP_I.exp = EXP.local;} EXP_C {EXP_I.LOCAL = EXP_C.EXP; EXP_C.TRUE = EXP_C.TRUE; EXP_C.FALSE = EXP_I.FALSE}
+
+EXP_C -> '<>' EXP {gera( if | EXP_C.local | <> | EXP.local | goto | EXP_C.true); 
+	| '<' EXP {gera( if | EXP_C.local | < | EXP.local | goto | EXP_C.true); gera(goto | EXP_C.false)}
+	| '>' EXP {gera( if | EXP_C.local | > | EXP.local | goto | EXP_C.true); gera(goto | EXP_C.false)}
+	| '<=' EXP {gera( if | EXP_C.local | <= | EXP.local | goto | EXP_C.true); gera(goto | EXP_C.false)}
+	| '>=' EXP {gera( if | EXP_C.local | >= | EXP.local | goto | EXP_C.true); gera(goto | EXP_C.false)}
+	| '==' EXP{gera( if | EXP_C.local | == | EXP.local | goto | EXP_C.true); gera(goto | EXP_C.false)}
+
+EXP -> TERM {EXPL.local = TERM.local} EXPL {EXP.local = EXPL.local}
+
+EXPL ->	+ TERM {EXPL1.local=criaTempo(); gera(EXPL1.local+'='+EXPL.local+'+'+TERM.local);} EXPL1 {EXPL.local = EXPL1.local}
+	| - TERM {EXPL1.local=criaTempo(); gera(EXPL1.local+'='+EXPL.local+'-'+TERM.local);} EXPL1 {EXPL.local = EXPL1.local}
+	| $ {EXPL.local = EXPL.local_h}
+
+TERM ->	FATOR {TERML.local = FATOR.local} TERML {TERM.local = TERML.local}
+TERML -> * FATOR {TERML1.local=criaTempo(); gera(TERML1.local+'='+TERML.local+'*'+FATOR.local);} TERML1 {TERML.local = TERML1.local}
+	| / FATOR {TERML1.local=criaTempo(); gera(TERML1.local+'='+TERML.local+'/'+FATOR.local);} TERML1 {TERML.local = TERML1.local}
+	| $ {TERML.local = TERML.local_h}
+
+FATOR -> VAL {FATORL.local = VAL.local} FATORL {FATOR.local = FATORL.local}
+FATORL -> ^ VAL {FATORL.local=criaTempo(); gera(FATORL1.local+'='+TERML.local+'^'+ VAL);} FATORL {FATORL.local = FATORL.local}
+	| $ {FATORL.local = FATORL.local_h}
+
+VAL -> VAR_D {VAL.local = VAR_D.local} 
+    ->| ( exp ) {VAL.local = EXP.local}
